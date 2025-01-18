@@ -1,157 +1,280 @@
-
 import 'package:flutter/material.dart';
-// import 'package:flutter_application_1/speed_pay_page.dart';
-// import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 
-void main(){
-  runApp(MyApp());
+void main() {
+  runApp(PaymentApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key); // Fixed constructor
-
+class PaymentApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title:"hi",
-      home:const SpeedPayPage(),
-      
+      title: 'SpeedPay App',
+      theme: ThemeData(primarySwatch: Colors.blue),
+      home: PaymentForm(),
     );
   }
 }
 
-
-class SpeedPayPage extends StatefulWidget {
-  const SpeedPayPage({Key? key}) : super(key: key);
-
+class PaymentForm extends StatefulWidget {
   @override
-  State<SpeedPayPage> createState() => _SpeedPayPageState();
+  _PaymentFormState createState() => _PaymentFormState();
 }
 
-class _SpeedPayPageState extends State<SpeedPayPage> {
-  late Razorpay _razorpay;
-  TextEditingController amtController = TextEditingController();
-
-  void openCheckout(amount) {
-    amount = amount * 100; // Convert to paise
-    var options = {
-      'key': 'spd_test_1D5OPsss45',
-      'amount': amount,
-      'name': 'G&P',
-      'prefill': {'contact': '1234567890', 'email': 'speed@gmail.com'},
-      'externals': {
-        'wallets': ['SpeedPay']
-      }
-    };
-    try {
-      _razorpay.open(options);
-    } catch (e) {
-      debugPrint('Error: $e');
-    }
-  }
-
-  void handlePaymentSuccess(PaymentSuccessResponse response) {
-    Fluttertoast.showToast(
-      msg: "Payment Successful: ${response.paymentId ?? 'Unknown ID'}",
-      toastLength: Toast.LENGTH_SHORT,
-    );
-  }
-
-  void handlePaymentFailure(PaymentFailureResponse response) {
-    Fluttertoast.showToast(
-      msg: "Payment Failed: ${response.message ?? 'Unknown Error'}",
-      toastLength: Toast.LENGTH_SHORT,
-    );
-  }
-
-  void handleExternalWallet(ExternalWalletResponse response) {
-    Fluttertoast.showToast(
-      msg: "External Wallet: ${response.walletName ?? 'Unknown Wallet'}",
-      toastLength: Toast.LENGTH_SHORT,
-    );
-  }
+class _PaymentFormState extends State<PaymentForm> {
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _amountController = TextEditingController();
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _contactController = TextEditingController();
 
   @override
   void dispose() {
-    _razorpay.clear();
-    super.dispose(); // Call parent dispose method
+    _amountController.dispose();
+    _nameController.dispose();
+    _emailController.dispose();
+    _contactController.dispose();
+    super.dispose();
   }
 
-  @override
-  void initState() {
-    super.initState();
-    _razorpay = Razorpay();
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, handlePaymentSuccess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, handlePaymentFailure);
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, handleExternalWallet);
+  void _navigateToConfirmation(BuildContext context) {
+    if (_formKey.currentState!.validate()) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PaymentConfirmation(
+            name: _nameController.text,
+            email: _emailController.text,
+            contact: _contactController.text,
+            amount: int.parse(_amountController.text),
+          ),
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color.fromARGB(255, 145, 111, 57),
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            SizedBox(height: 100),
-            Image.network(
-                "https://speedpay.myumbbank.com/assets/SpeedPay%20Logo-Full%20Colour-83d519e4.png"),
-            SizedBox(height: 10),
-            Text(
-              "Welcome To SpeedPay App!",
-              style: TextStyle(
-                  color: Colors.amber,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 30),
-            Padding(
-              padding: EdgeInsets.all(8.0),
-              child: TextFormField(
-                cursorColor: Colors.white,
-                autofocus: false,
-                style: TextStyle(color: const Color.fromARGB(255, 228, 225, 219)),
-                decoration: InputDecoration(
-                    labelText: 'Enter Amount To be Paid',
-                    labelStyle: TextStyle(fontSize: 15.0, color: Colors.white),
-                    border: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white, width: 1.0)),
-                    enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(color: Colors.white, width: 1.0)),
-                    errorStyle: TextStyle(color: Colors.redAccent, fontSize: 15)),
-                controller: amtController,
+      appBar: AppBar(
+        title: Text('Payment App'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _nameController,
+                decoration: InputDecoration(labelText: 'Name'),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Enter Amount To Be Paid';
+                    return 'Please enter your name';
                   }
                   return null;
                 },
               ),
+              TextFormField(
+                controller: _emailController,
+                decoration: InputDecoration(labelText: 'Email'),
+                validator: (value) {
+                  if (value == null || value.isEmpty || !RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
+                    return 'Please enter a valid email';
+                  }
+                  return null;
+                },
+              ),
+              TextFormField(
+                controller: _contactController,
+                decoration: InputDecoration(labelText: 'Contact Number'),
+                validator: (value) {
+                  if (value == null || value.isEmpty || value.length != 10) {
+                    return 'Please enter a valid contact number';
+                  }
+                  return null;
+                },
+              ),
+              TextFormField(
+                controller: _amountController,
+                decoration: InputDecoration(labelText: 'Amount'),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty || int.tryParse(value) == null || int.parse(value) <= 0) {
+                    return 'Please enter a valid amount';
+                  }
+                  return null;
+                },
+              ),
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () => _navigateToConfirmation(context),
+                child: Text('Pay Now'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class PaymentConfirmation extends StatefulWidget {
+  final String name;
+  final String email;
+  final String contact;
+  final int amount;
+
+  PaymentConfirmation({
+    required this.name,
+    required this.email,
+    required this.contact,
+    required this.amount,
+  });
+
+  @override
+  _PaymentConfirmationState createState() => _PaymentConfirmationState();
+}
+
+class _PaymentConfirmationState extends State<PaymentConfirmation> {
+  late Razorpay _razorpay;
+
+  @override
+  void initState() {
+    super.initState();
+    _razorpay = Razorpay();
+    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+  }
+
+  @override
+  void dispose() {
+    _razorpay.clear();
+    super.dispose();
+  }
+
+  void _handlePaymentSuccess(PaymentSuccessResponse response) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text("Payment Successful"),
+          content: Text("Your payment ID is: ${response.paymentId}"),
+          actions: <Widget>[
+            TextButton(
+              child: Text("OK"),
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => PaymentSuccessPage(paymentId: response.paymentId.toString()),
+                  ),
+                );
+              },
             ),
-            SizedBox(height: 30),
+          ],
+        );
+      },
+    );
+  }
+
+  void _handlePaymentError(PaymentFailureResponse response) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("Payment Failed: ${response.message}")),
+    );
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    print("External Wallet: ${response.walletName}");
+  }
+
+  void openCheckout() async {
+    var options = {
+      'key': 'PknuUL0R6CypT8',
+      'amount': widget.amount * 100, // Amount in paise
+      'name': widget.name,
+      'description': 'Payment for services',
+      'prefill': {
+        'contact': widget.contact,
+        'email': widget.email,
+      },
+      'theme': {
+        'color': '#F37254',
+      }
+    };
+
+    try {
+      _razorpay.open(options);
+    } catch (e) {
+      print(e.toString());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Confirm Payment'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Name: ${widget.name}'),
+            Text('Email: ${widget.email}'),
+            Text('Contact: ${widget.contact}'),
+            Text('Amount: ₹${widget.amount}'),
+            SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: openCheckout,
+              child: Text('Proceed to Payment'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class PaymentSuccessPage extends StatelessWidget {
+  final String paymentId;
+
+  PaymentSuccessPage({required this.paymentId});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Payment Successful'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.check_circle,
+              size: 100,
+              color: Colors.green,
+            ),
+            SizedBox(height: 20),
+            Text(
+              'Payment Successful!',
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Payment ID: $paymentId',
+              style: TextStyle(fontSize: 16),
+            ),
+            SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
-                if (amtController.text.isNotEmpty) {
-                  try {
-                    int amount = int.parse(amtController.text);
-                    openCheckout(amount);
-                  } catch (e) {
-                    Fluttertoast.showToast(
-                      msg: "Please enter a valid amount",
-                      toastLength: Toast.LENGTH_SHORT,
-                    );
-                  }
-                }
+                Navigator.popUntil(context, (route) => route.isFirst);
               },
-              child: Padding(
-                padding: EdgeInsets.all(8.0),
-                child: Text('Make Payment'),
-              ),
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.yellow),
+              child: Text('Back to Home'),
             ),
           ],
         ),
